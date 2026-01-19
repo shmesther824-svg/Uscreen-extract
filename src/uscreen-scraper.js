@@ -83,22 +83,43 @@ class UscreenScraper {
     // Wait for login form
     await this.page.waitForSelector('input[type="email"], input[placeholder*="email"]', { timeout: 10000 });
     
-    // Enter credentials
-    await this.page.type('input[type="email"], input[placeholder*="email"]', this.email);
-    await this.page.type('input[type="password"]', this.password);
-    
-    // Click login button (try submit button first, then find by text)
-    const submitButton = await this.page.$('button[type="submit"]');
-    if (submitButton) {
-      await submitButton.click();
-    } else {
-      // Find login button by text content
-      await this.page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const loginBtn = buttons.find(b => b.textContent.toLowerCase().includes('log in') || b.textContent.toLowerCase().includes('login'));
-        if (loginBtn) loginBtn.click();
-      });
+    // Enter credentials - find and type into email field
+    const emailInput = await this.page.$('input[type="email"]') || await this.page.$('input[placeholder*="email"]');
+    if (emailInput) {
+      await emailInput.type(this.email);
     }
+    
+    const passwordInput = await this.page.$('input[type="password"]');
+    if (passwordInput) {
+      await passwordInput.type(this.password);
+    }
+    
+    // Small delay to ensure form is ready
+    await this.delay(500);
+    
+    // Click login button via JavaScript (more reliable than Puppeteer click)
+    await this.page.evaluate(() => {
+      // Try submit button first
+      const submitBtn = document.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.click();
+        return;
+      }
+      // Then try input submit
+      const inputSubmit = document.querySelector('input[type="submit"]');
+      if (inputSubmit) {
+        inputSubmit.click();
+        return;
+      }
+      // Finally try finding by text
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const loginBtn = buttons.find(b => 
+        b.textContent.toLowerCase().includes('log in') || 
+        b.textContent.toLowerCase().includes('login') ||
+        b.textContent.toLowerCase().includes('sign in')
+      );
+      if (loginBtn) loginBtn.click();
+    });
     
     // Wait for dashboard to load
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
