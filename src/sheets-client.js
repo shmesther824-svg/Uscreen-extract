@@ -14,11 +14,15 @@ class GoogleSheetsClient {
   }
 
   async authenticate() {
+    console.log(`   🔑 Authenticating with Google Sheets...`);
+    console.log(`   📋 Spreadsheet ID: ${this.spreadsheetId}`);
+    
     let auth;
     
     // Check if running in GitHub Actions (uses GOOGLE_CREDENTIALS env var)
     if (process.env.GOOGLE_CREDENTIALS) {
       const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      console.log(`   👤 Service Account: ${credentials.client_email}`);
       auth = new google.auth.GoogleAuth({
         credentials,
         scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -32,6 +36,21 @@ class GoogleSheetsClient {
     }
 
     this.sheets = google.sheets({ version: 'v4', auth });
+    
+    // Verify access to spreadsheet
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId
+      });
+      console.log(`   ✅ Connected to: "${response.data.properties.title}"`);
+      
+      // List existing sheets
+      const sheetNames = response.data.sheets.map(s => s.properties.title);
+      console.log(`   📑 Existing tabs: ${sheetNames.join(', ')}`);
+    } catch (e) {
+      console.error(`   ❌ Cannot access spreadsheet: ${e.message}`);
+      throw e;
+    }
   }
 
   async writeResults(data) {
