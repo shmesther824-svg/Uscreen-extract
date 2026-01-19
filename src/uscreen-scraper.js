@@ -87,8 +87,18 @@ class UscreenScraper {
     await this.page.type('input[type="email"], input[placeholder*="email"]', this.email);
     await this.page.type('input[type="password"]', this.password);
     
-    // Click login button
-    await this.page.click('button[type="submit"], button:contains("Log in")');
+    // Click login button (try submit button first, then find by text)
+    const submitButton = await this.page.$('button[type="submit"]');
+    if (submitButton) {
+      await submitButton.click();
+    } else {
+      // Find login button by text content
+      await this.page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const loginBtn = buttons.find(b => b.textContent.toLowerCase().includes('log in') || b.textContent.toLowerCase().includes('login'));
+        if (loginBtn) loginBtn.click();
+      });
+    }
     
     // Wait for dashboard to load
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
@@ -103,8 +113,8 @@ class UscreenScraper {
     await this.page.goto(`${this.loginUrl}/people`, { waitUntil: 'networkidle2' });
     await this.delay(2000);
     
-    // Click Export button
-    const exportButton = await this.page.$('button:contains("Export"), [data-testid="export-button"]');
+    // Click Export button - find by data-testid or text content
+    const exportButton = await this.page.$('[data-testid="export-button"]');
     if (exportButton) {
       await exportButton.click();
       await this.delay(2000);
