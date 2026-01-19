@@ -1,0 +1,24 @@
+# Environment variables
+.env
+.env.local
+
+# Google credentials
+credentials.json
+
+# Node modules
+node_modules/
+
+# Downloads folder (generated during sync)
+downloads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

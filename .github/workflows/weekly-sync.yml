@@ -1,0 +1,50 @@
+name: Weekly Uscreen + Salesforce Sync
+
+on:
+  # Run every Monday at 6 AM Eastern (11 AM UTC)
+  schedule:
+    - cron: '0 11 * * 1'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      - name: Run sync
+        env:
+          USCREEN_EMAIL: ${{ secrets.USCREEN_EMAIL }}
+          USCREEN_PASSWORD: ${{ secrets.USCREEN_PASSWORD }}
+          SF_LOGIN_URL: ${{ secrets.SF_LOGIN_URL }}
+          SF_USERNAME: ${{ secrets.SF_USERNAME }}
+          SF_PASSWORD: ${{ secrets.SF_PASSWORD }}
+          SF_SECURITY_TOKEN: ${{ secrets.SF_SECURITY_TOKEN }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: npm run sync
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: |
+            downloads/
+            *.log

@@ -1,0 +1,20 @@
+{
+  "name": "uscreen-sf-sync",
+  "version": "1.0.0",
+  "description": "Weekly Uscreen export + Salesforce sync to Google Sheets",
+  "main": "src/index.js",
+  "scripts": {
+    "sync": "node src/index.js",
+    "test": "node src/index.js --dry-run"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "jsforce": "^1.11.0",
+    "googleapis": "^126.0.0",
+    "dotenv": "^16.0.0",
+    "csv-parse": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
