@@ -15,14 +15,29 @@ class GoogleSheetsClient {
 
   async authenticate() {
     console.log(`   🔑 Authenticating with Google Sheets...`);
-    console.log(`   📋 Spreadsheet ID: ${this.spreadsheetId}`);
+    
+    // Debug: show spreadsheet ID (first and last 4 chars)
+    const id = this.spreadsheetId || 'UNDEFINED';
+    const idPreview = id.length > 10 ? `${id.substring(0,4)}...${id.substring(id.length-4)}` : id;
+    console.log(`   📋 Spreadsheet ID: ${idPreview} (length: ${id.length})`);
+    
+    if (!this.spreadsheetId || this.spreadsheetId.trim() === '') {
+      throw new Error('GOOGLE_SHEET_ID is empty or undefined. Check your GitHub secret.');
+    }
     
     let auth;
     
     // Check if running in GitHub Actions (uses GOOGLE_CREDENTIALS env var)
     if (process.env.GOOGLE_CREDENTIALS) {
-      const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      console.log(`   📝 GOOGLE_CREDENTIALS length: ${process.env.GOOGLE_CREDENTIALS.length} chars`);
+      let credentials;
+      try {
+        credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      } catch (e) {
+        throw new Error(`Failed to parse GOOGLE_CREDENTIALS as JSON: ${e.message}`);
+      }
       console.log(`   👤 Service Account: ${credentials.client_email}`);
+      console.log(`   🏢 Project ID: ${credentials.project_id}`);
       auth = new google.auth.GoogleAuth({
         credentials,
         scopes: ['https://www.googleapis.com/auth/spreadsheets']
