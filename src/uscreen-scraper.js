@@ -130,67 +130,150 @@ class UscreenScraper {
   async triggerPeopleExport() {
     console.log('   📋 Triggering People export...');
     
-    // Navigate to People page
-    await this.page.goto(`${this.loginUrl}/people`, { waitUntil: 'networkidle2' });
-    await this.delay(2000);
+    // Navigate to People page - correct URL
+    const peopleUrl = `${this.loginUrl}/manage/people`;
+    console.log(`   📍 Navigating to: ${peopleUrl}`);
+    await this.page.goto(peopleUrl, { waitUntil: 'networkidle2' });
+    await this.delay(3000);
     
-    // Click Export button - find by data-testid or text content
-    const exportButton = await this.page.$('[data-testid="export-button"]');
-    if (exportButton) {
-      await exportButton.click();
-      await this.delay(2000);
-    } else {
+    // Look for Export button and click it
+    const clicked = await this.page.evaluate(() => {
+      // Try various selectors for export button
+      const selectors = [
+        'button[data-testid="export-button"]',
+        'button.export-button',
+        '[data-action="export"]',
+        'a[href*="export"]'
+      ];
+      
+      for (const selector of selectors) {
+        const el = document.querySelector(selector);
+        if (el) {
+          el.click();
+          return `Found via: ${selector}`;
+        }
+      }
+      
       // Try finding by text content
-      await this.page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const exportBtn = buttons.find(b => b.textContent.includes('Export'));
-        if (exportBtn) exportBtn.click();
-      });
-    }
+      const buttons = Array.from(document.querySelectorAll('button, a'));
+      const exportBtn = buttons.find(b => 
+        b.textContent.toLowerCase().includes('export') ||
+        b.textContent.toLowerCase().includes('download')
+      );
+      if (exportBtn) {
+        exportBtn.click();
+        return `Found by text: ${exportBtn.textContent.trim()}`;
+      }
+      
+      return 'Not found';
+    });
     
+    console.log(`   🖱️ Export button: ${clicked}`);
+    await this.delay(3000);
     console.log('   ✅ People export triggered');
   }
 
   async triggerSalesExport() {
     console.log('   💰 Triggering Sales export...');
     
-    // Navigate to Sales page
-    await this.page.goto(`${this.loginUrl}/sales`, { waitUntil: 'networkidle2' });
-    await this.delay(2000);
+    // Navigate to Invoices page - correct URL
+    const invoicesUrl = `${this.loginUrl}/bullet/invoices`;
+    console.log(`   📍 Navigating to: ${invoicesUrl}`);
+    await this.page.goto(invoicesUrl, { waitUntil: 'networkidle2' });
+    await this.delay(3000);
     
-    // Click Export button
-    await this.page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const exportBtn = buttons.find(b => b.textContent.includes('Export'));
-      if (exportBtn) exportBtn.click();
+    // Look for Export button and click it
+    const clicked = await this.page.evaluate(() => {
+      // Try various selectors for export button
+      const selectors = [
+        'button[data-testid="export-button"]',
+        'button.export-button',
+        '[data-action="export"]',
+        'a[href*="export"]'
+      ];
+      
+      for (const selector of selectors) {
+        const el = document.querySelector(selector);
+        if (el) {
+          el.click();
+          return `Found via: ${selector}`;
+        }
+      }
+      
+      // Try finding by text content
+      const buttons = Array.from(document.querySelectorAll('button, a'));
+      const exportBtn = buttons.find(b => 
+        b.textContent.toLowerCase().includes('export') ||
+        b.textContent.toLowerCase().includes('download')
+      );
+      if (exportBtn) {
+        exportBtn.click();
+        return `Found by text: ${exportBtn.textContent.trim()}`;
+      }
+      
+      return 'Not found';
     });
     
-    await this.delay(2000);
+    console.log(`   🖱️ Export button: ${clicked}`);
+    await this.delay(3000);
     console.log('   ✅ Sales export triggered');
   }
 
   async downloadExports() {
     console.log('   📥 Downloading from Exported Files page...');
     
-    // Navigate to Settings > Exported Files
-    await this.page.goto(`${this.loginUrl}/settings/exported-files`, { waitUntil: 'networkidle2' });
-    await this.delay(3000);
+    // Navigate to Exported Files page - correct URL
+    const exportedFilesUrl = `${this.loginUrl}/bullet/settings/exported_files`;
+    console.log(`   📍 Navigating to: ${exportedFilesUrl}`);
+    await this.page.goto(exportedFilesUrl, { waitUntil: 'networkidle2' });
+    await this.delay(5000);
     
-    // Find and click download links for the most recent exports
-    // This may need adjustment based on actual UI
-    const downloads = await this.page.evaluate(() => {
-      const links = Array.from(document.querySelectorAll('a[download], a[href*=".csv"]'));
-      return links.slice(0, 2).map(l => l.href);
+    // Find download links
+    const pageInfo = await this.page.evaluate(() => {
+      const allLinks = Array.from(document.querySelectorAll('a'));
+      const downloadLinks = allLinks.filter(a => 
+        a.href.includes('.csv') || 
+        a.href.includes('download') ||
+        a.hasAttribute('download') ||
+        a.textContent.toLowerCase().includes('download')
+      );
+      
+      return {
+        pageUrl: window.location.href,
+        totalLinks: allLinks.length,
+        downloadLinksFound: downloadLinks.length,
+        links: downloadLinks.slice(0, 4).map(l => ({ 
+          href: l.href, 
+          text: l.textContent.trim().substring(0, 50)
+        }))
+      };
     });
     
-    // Download the files
-    for (const url of downloads) {
-      await this.page.goto(url);
-      await this.delay(3000);
+    console.log(`   📍 Page URL: ${pageInfo.pageUrl}`);
+    console.log(`   🔗 Total links: ${pageInfo.totalLinks}, Download links: ${pageInfo.downloadLinksFound}`);
+    
+    if (pageInfo.links.length > 0) {
+      console.log(`   📎 Found links: ${JSON.stringify(pageInfo.links)}`);
     }
     
-    // Find downloaded files
-    const files = fs.readdirSync(this.downloadPath);
+    // Click on download links/buttons
+    for (let i = 0; i < Math.min(2, pageInfo.links.length); i++) {
+      const link = pageInfo.links[i];
+      if (link.href && !link.href.includes('javascript:')) {
+        console.log(`   ⬇️ Downloading: ${link.text || link.href}`);
+        try {
+          await this.page.goto(link.href, { waitUntil: 'networkidle2' });
+          await this.delay(5000);
+        } catch (e) {
+          console.log(`   ⚠️ Download error: ${e.message}`);
+        }
+      }
+    }
+    
+    // Check for downloaded files
+    const files = fs.existsSync(this.downloadPath) ? fs.readdirSync(this.downloadPath) : [];
+    console.log(`   📂 Files in downloads folder: ${files.length > 0 ? files.join(', ') : 'none'}`);
+    
     const csvFiles = files.filter(f => f.endsWith('.csv')).sort((a, b) => {
       return fs.statSync(path.join(this.downloadPath, b)).mtime - 
              fs.statSync(path.join(this.downloadPath, a)).mtime;
