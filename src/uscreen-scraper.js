@@ -109,31 +109,54 @@ class UscreenScraper {
     }
     
     // Small delay to ensure form is ready
-    await this.delay(500);
+    await this.delay(1000);
     
-    // Click login button via JavaScript (more reliable than Puppeteer click)
-    await this.page.evaluate(() => {
-      // Try submit button first
-      const submitBtn = document.querySelector('button[type="submit"]');
-      if (submitBtn) {
-        submitBtn.click();
-        return;
-      }
-      // Then try input submit
-      const inputSubmit = document.querySelector('input[type="submit"]');
-      if (inputSubmit) {
-        inputSubmit.click();
-        return;
-      }
-      // Finally try finding by text
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const loginBtn = buttons.find(b => 
-        b.textContent.toLowerCase().includes('log in') || 
-        b.textContent.toLowerCase().includes('login') ||
-        b.textContent.toLowerCase().includes('sign in')
-      );
-      if (loginBtn) loginBtn.click();
+    // Debug: List all buttons on the page
+    const buttons = await this.page.evaluate(() => {
+      const allBtns = Array.from(document.querySelectorAll('button, input[type="submit"]'));
+      return allBtns.map(b => ({
+        text: b.textContent?.trim().substring(0, 50),
+        type: b.type,
+        tagName: b.tagName,
+        className: b.className?.substring(0, 50)
+      }));
     });
+    console.log(`   📍 Found buttons: ${JSON.stringify(buttons)}`);
+    
+    // Click the login form submit - AVOID Google buttons
+    const clickResult = await this.page.evaluate(() => {
+      // Look for the form that contains the email/password fields
+      const emailField = document.querySelector('input[name="user[email]"]');
+      if (emailField) {
+        // Find the form this field belongs to
+        const form = emailField.closest('form');
+        if (form) {
+          // Try to submit the form directly
+          const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+          if (submitBtn && !submitBtn.textContent?.toLowerCase().includes('google')) {
+            submitBtn.click();
+            return `Clicked form submit: ${submitBtn.textContent?.trim()}`;
+          }
+          // Or submit the form
+          form.submit();
+          return 'Submitted form directly';
+        }
+      }
+      
+      // Fallback: find any submit button that's NOT Google
+      const allButtons = Array.from(document.querySelectorAll('button[type="submit"], input[type="submit"]'));
+      const nonGoogleBtn = allButtons.find(b => 
+        !b.textContent?.toLowerCase().includes('google') && 
+        !b.className?.toLowerCase().includes('google')
+      );
+      if (nonGoogleBtn) {
+        nonGoogleBtn.click();
+        return `Clicked non-Google button: ${nonGoogleBtn.textContent?.trim()}`;
+      }
+      
+      return 'No suitable button found';
+    });
+    console.log(`   📍 Click result: ${clickResult}`);
     
     // Wait for dashboard to load
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
