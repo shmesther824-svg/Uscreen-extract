@@ -36,9 +36,9 @@ class UscreenScraper {
       await this.triggerPeopleExport();
       await this.triggerSalesExport();
       
-      // Wait for exports to be ready
-      console.log('   ⏳ Waiting 30s for exports to generate...');
-      await this.delay(30000);
+      // Wait for exports to be ready (may take a while)
+      console.log('   ⏳ Waiting 60s for exports to generate...');
+      await this.delay(60000);
       
       // Download from Exported Files page
       const files = await this.downloadExports();
@@ -305,14 +305,26 @@ class UscreenScraper {
       console.log(`   📎 Found links: ${JSON.stringify(pageInfo.links)}`);
     }
     
-    // Click on download links/buttons
+    // Click download links to trigger downloads (don't navigate)
     for (let i = 0; i < Math.min(2, pageInfo.links.length); i++) {
       const link = pageInfo.links[i];
-      if (link.href && !link.href.includes('javascript:')) {
-        console.log(`   ⬇️ Downloading: ${link.text || link.href}`);
+      if (link.href && link.href.includes('.csv')) {
+        const filename = link.href.split('/').pop();
+        console.log(`   ⬇️ Downloading file ${i+1}: ${filename}`);
         try {
-          await this.page.goto(link.href, { waitUntil: 'networkidle2' });
-          await this.delay(5000);
+          // Click the link element in the page context
+          await this.page.evaluate((index) => {
+            const allLinks = Array.from(document.querySelectorAll('a'));
+            const downloadLinks = allLinks.filter(a => 
+              a.href.includes('.csv') || 
+              a.textContent.toLowerCase().includes('download')
+            );
+            if (downloadLinks[index]) {
+              downloadLinks[index].click();
+            }
+          }, i);
+          // Wait for download to start and complete
+          await this.delay(10000);
         } catch (e) {
           console.log(`   ⚠️ Download error: ${e.message}`);
         }
