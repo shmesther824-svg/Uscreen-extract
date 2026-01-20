@@ -83,6 +83,10 @@ class UscreenScraper {
     console.log(`   📍 Login URL: ${loginUrl}`);
     await this.page.goto(loginUrl, { waitUntil: 'networkidle2' });
     
+    // Debug: log the page title and URL
+    console.log(`   📍 Current URL: ${this.page.url()}`);
+    console.log(`   📍 Page title: ${await this.page.title()}`);
+    
     // Wait for login form - use exact Uscreen field names
     await this.page.waitForSelector('input[name="user[email]"], input[type="email"]', { timeout: 10000 });
     
@@ -133,6 +137,18 @@ class UscreenScraper {
     
     // Wait for dashboard to load
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
+    
+    // Debug: log the page after login
+    console.log(`   📍 After login URL: ${this.page.url()}`);
+    console.log(`   📍 After login title: ${await this.page.title()}`);
+    
+    // Check if we're actually logged in by looking for a logout link or username
+    const isLoggedIn = await this.page.evaluate(() => {
+      // Look for signs we're logged in
+      const body = document.body.innerHTML.toLowerCase();
+      return body.includes('logout') || body.includes('sign out') || body.includes('dashboard');
+    });
+    console.log(`   📍 Appears logged in: ${isLoggedIn}`);
     
     console.log('   ✅ Logged in successfully');
   }
