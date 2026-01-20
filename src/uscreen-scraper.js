@@ -83,18 +83,25 @@ class UscreenScraper {
     console.log(`   📍 Login URL: ${loginUrl}`);
     await this.page.goto(loginUrl, { waitUntil: 'networkidle2' });
     
-    // Wait for login form
-    await this.page.waitForSelector('input[type="email"], input[placeholder*="email"]', { timeout: 10000 });
+    // Wait for login form - use exact Uscreen field names
+    await this.page.waitForSelector('input[name="user[email]"], input[type="email"]', { timeout: 10000 });
     
-    // Enter credentials - find and type into email field
-    const emailInput = await this.page.$('input[type="email"]') || await this.page.$('input[placeholder*="email"]');
+    // Enter credentials - find and type into email field using exact name
+    const emailInput = await this.page.$('input[name="user[email]"]') || await this.page.$('input[type="email"]');
     if (emailInput) {
       await emailInput.type(this.email);
+      console.log('   ✅ Entered email');
+    } else {
+      console.log('   ❌ Email field not found');
     }
     
-    const passwordInput = await this.page.$('input[type="password"]');
+    // Password field - try exact name first
+    const passwordInput = await this.page.$('input[name="user[password]"]') || await this.page.$('input[type="password"]');
     if (passwordInput) {
       await passwordInput.type(this.password);
+      console.log('   ✅ Entered password');
+    } else {
+      console.log('   ❌ Password field not found');
     }
     
     // Small delay to ensure form is ready
