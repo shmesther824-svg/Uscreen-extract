@@ -78,7 +78,10 @@ class UscreenScraper {
   async login() {
     console.log('   🔐 Logging into Uscreen...');
     
-    await this.page.goto(this.loginUrl, { waitUntil: 'networkidle2' });
+    // Use the correct admin login URL
+    const loginUrl = `${this.loginUrl}/admin/users/sign_in`;
+    console.log(`   📍 Login URL: ${loginUrl}`);
+    await this.page.goto(loginUrl, { waitUntil: 'networkidle2' });
     
     // Wait for login form
     await this.page.waitForSelector('input[type="email"], input[placeholder*="email"]', { timeout: 10000 });
